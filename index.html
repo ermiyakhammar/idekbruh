@@ -361,7 +361,7 @@ function allEx(){ const s=new Set(); S.allWorkouts.forEach(w=>w.exercises.forEac
 
 /* ═══ SUPABASE DB CALLS ═══ */
 async function dbGetProgram(username){
-  const {data,error}=await sb.from('programs').select('program').eq('username',username).single();
+  const {data,error}=await sb.from('programs').select('program').eq('username',username).maybeSingle();
   if(error||!data) return null;
   return data.program;
 }
