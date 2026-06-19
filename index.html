@@ -311,8 +311,8 @@ label{display:block;font-size:12px;color:var(--text2);margin-bottom:5px;font-wei
    STEP 1 — PASTE YOUR SUPABASE KEYS HERE
    Get them from: supabase.com → your project → Settings → API
    ═══════════════════════════════════════════════════ */
-const SUPABASE_URL  = 'https://cqezrvylgajpvxefxoek.supabase.co';
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNxZXpydnlsZ2FqcHZ4ZWZ4b2VrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4NTQ2OTgsImV4cCI6MjA5NzQzMDY5OH0.bLb4UGjUrYneddRi6pKSS_sAQOclorVnkBbKSHugDfI';
+const SUPABASE_URL  = 'PASTE_YOUR_SUPABASE_URL_HERE';
+const SUPABASE_ANON = 'PASTE_YOUR_SUPABASE_ANON_KEY_HERE';
 
 /* ═══════════════════════════════════════════════════
    HARDCODED USERS (username → password)
@@ -476,16 +476,34 @@ function renderDE(){
     <div id="bexl">${renderBEL()}</div>
     <button class="btn btg btsm btfw" onclick="addBEx()" style="margin-top:6px;">+ Add exercise</button>`;
 }
+const EX_LIST=['Squat','Front squat','Hack squat','Leg press','Leg extension','Leg curl','Romanian deadlift','Deadlift','Sumo deadlift','Calf raise','Hip thrust','Bench press','Incline bench press','Decline bench press','Incline DB press','DB press','Cable fly','Pec deck','Dips','Pull-up','Chin-up','Lat pulldown','Seated cable row','Chest supported row','Barbell row','DB row','Face pull','Straight-arm pulldown','Overhead press','DB shoulder press','Lateral raise','Cable lateral raise','Rear delt fly','Shrugs','DB curl','Barbell curl','Incline DB curl','Cable curl','Hammer curl','Preacher curl','Tricep pushdown','Skull crushers','Overhead tricep extension','Close grip bench','Cable overhead extension','Plank','Ab wheel','Cable crunch','Hanging leg raise'];
+function exOpts(sel){return'<option value="">-- Select or type custom --</option>'+EX_LIST.map(e=>'<option value="'+e+'"'+(e===sel?' selected':'')+'>'+e+'</option>').join('');}
 function renderBEL(){
   const day=S.bprog[S.bcur];
-  if(!day.exercises.length) return`<div style="color:var(--text3);font-size:13px;padding:6px 0 4px;">No exercises yet.</div>`;
-  return day.exercises.map((ex,ei)=>`
-    <div class="exrow">
-      <input type="text" value="${ex.name}" placeholder="Exercise name" list="exdl" oninput="S.bprog[S.bcur].exercises[${ei}].name=this.value">
-      <input type="number" class="setsw" value="${ex.sets||3}" placeholder="Sets" min="1" max="20" title="Sets" oninput="S.bprog[S.bcur].exercises[${ei}].sets=+this.value">
-      <button class="ibtn" onclick="rmBEx(${ei})"><svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
-    </div>`).join('');
+  if(!day.exercises.length) return'<div style="color:var(--text3);font-size:13px;padding:6px 0 4px;">No exercises yet.</div>';
+  return day.exercises.map((ex,ei)=>{
+    const isCustom=ex.name&&!EX_LIST.includes(ex.name);
+    return'<div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--rsm);padding:12px;margin-bottom:8px;">'
+      +'<div style="margin-bottom:10px;">'
+      +'<label style="margin-bottom:4px;">Exercise</label>'
+      +'<select onchange="setBExName('+ei+',this.value)" style="margin-bottom:6px;">'+exOpts(isCustom?'':ex.name)+'</select>'
+      +'<input type="text" value="'+(isCustom?ex.name:'')+'" placeholder="Or type a custom exercise..." oninput="setBExCustom('+ei+',this.value)" style="font-size:13px;">'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;">'
+      +'<div style="display:flex;align-items:center;gap:12px;">'
+      +'<span style="font-size:12px;color:var(--text2);">Sets</span>'
+      +'<button class="ibtn" onclick="adjSets('+ei+',-1)"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><path d="M5 12h14"/></svg></button>'
+      +'<span style="font-size:16px;font-weight:600;min-width:24px;text-align:center;">'+(ex.sets||3)+'</span>'
+      +'<button class="ibtn" onclick="adjSets('+ei+',1)"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button>'
+      +'</div>'
+      +'<button class="btn btd btxs" onclick="rmBEx('+ei+')">Remove</button>'
+      +'</div>'
+      +'</div>';
+  }).join('');
 }
+function setBExName(ei,val){if(val){S.bprog[S.bcur].exercises[ei].name=val;}document.getElementById('bexl').innerHTML=renderBEL();}
+function setBExCustom(ei,val){S.bprog[S.bcur].exercises[ei].name=val;}
+function adjSets(ei,delta){const ex=S.bprog[S.bcur].exercises[ei];ex.sets=Math.max(1,Math.min(20,(ex.sets||3)+delta));document.getElementById('bexl').innerHTML=renderBEL();}
 function addBEx(){ S.bprog[S.bcur].exercises.push({name:'',sets:3}); document.getElementById('bexl').innerHTML=renderBEL(); }
 function rmBEx(ei){ S.bprog[S.bcur].exercises.splice(ei,1); document.getElementById('bexl').innerHTML=renderBEL(); }
 function goDay(i){ S.bcur=i; renderDE(); }
@@ -620,15 +638,27 @@ function renderSessionLog(el,idx){
       const lx=lw?lw.exercises.find(e=>e.name===ex.name):null;
       const ltxt=lx?'Last: '+lx.sets.map(s=>`${s.w||0}kg\u00d7${s.r||0}`).join(', '):'First time \u2014 set your baseline';
       return`<div class="sexblock">
-        <div class="sexname">${ex.name}</div>
-        <div class="sextgt">${ex.sets} set${ex.sets!==1?'s':''} \u00b7 ${ltxt}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+          <div class="sexname">${ex.name}</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <button class="ibtn" onclick="adjSessionSets('${today}','${ex.name.replace(/'/g,"\\'")}','${idx}',-1)" style="padding:5px;"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><path d="M5 12h14"/></svg></button>
+            <span style="font-size:13px;color:var(--text2);">${sets.length} set${sets.length!==1?'s':''}</span>
+            <button class="ibtn" onclick="adjSessionSets('${today}','${ex.name.replace(/'/g,"\\'")}','${idx}',1)" style="padding:5px;"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button>
+          </div>
+        </div>
+        <div class="sextgt">${ltxt}</div>
         <div class="sthdr"><span>#</span><span>kg</span><span>Reps</span><span>RIR</span></div>
         ${sets.map((s,si)=>`
           <div class="strow">
             <div class="stnum">${si+1}</div>
             <input type="number" inputmode="decimal" placeholder="${lx&&lx.sets[si]?lx.sets[si].w||'':''}" value="${s.w}" step="0.5" min="0" onchange="updS('${today}','${ex.name.replace(/'/g,"\\'")}',${si},'w',this.value)">
-            <input type="number" inputmode="numeric" placeholder="${lx&&lx.sets[si]?lx.sets[si].r||'':''}" value="${s.r}" min="0" onchange="updS('${today}','${ex.name.replace(/'/g,"\\'")}',${si},'r',this.value)">
-            <input type="number" inputmode="numeric" placeholder="0" value="${s.rir}" min="0" max="10" onchange="updS('${today}','${ex.name.replace(/'/g,"\\'")}',${si},'rir',this.value)">
+            <select onchange="updS('${today}','${ex.name.replace(/'/g,"\\'")}',${si},'r',this.value)" style="padding:8px 4px;font-size:13px;text-align:center;">
+              <option value="">-</option>
+              ${Array.from({length:30},(_,i)=>`<option value="${i+1}"${s.r==i+1?' selected':''}>${i+1}</option>`).join('')}
+            </select>
+            <select onchange="updS('${today}','${ex.name.replace(/'/g,"\\'")}',${si},'rir',this.value)" style="padding:8px 4px;font-size:13px;text-align:center;">
+              ${Array.from({length:6},(_,i)=>`<option value="${i}"${s.rir==i?' selected':''}>${i}</option>`).join('')}
+            </select>
           </div>`).join('')}
       </div>`;
     }).join('')}
@@ -641,6 +671,17 @@ function renderSessionLog(el,idx){
 
 function cancelSession(){ S.activeDay=null; renderToday(); }
 function updS(date,exName,si,field,val){ if(S.sess[date]&&S.sess[date][exName]) S.sess[date][exName][si][field]=val; }
+function adjSessionSets(date,exName,idx,delta){
+  if(!S.sess[date]||!S.sess[date][exName]) return;
+  const sets=S.sess[date][exName];
+  if(delta>0){
+    sets.push({w:'',r:'',rir:'0'});
+  } else {
+    if(sets.length<=1) return;
+    sets.pop();
+  }
+  renderSessionLog(document.getElementById('today-content'),+idx);
+}
 
 async function finishSess(date,idx){
   const day=S.prog[idx], sess=S.sess[date]||{};
